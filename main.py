@@ -9,57 +9,52 @@ from cinema import Cinema
 ######################################################################################################
 
 # 포함할 영화 검색어
-in_movie_nm_list = [
-    #"달짝",
-    # "엘리멘탈",
-    # "오펜"
+IN_MOVIE_NM_LIST = [
+    "와일드 로봇",
+    "조커",
+    "대도시의 사랑법"
 ]
 
 # 제외할 영화 검색어
-ex_movie_nm_list = [
-    "임파서블",
-    "밀수",
-    "더 문",
-    "콘크리트",
-    #"보호자",
-    "퀴어",
-    "메가로돈",
-    "셰이프",
-    "부다페스트",
-    "블랙스완",
+EX_MOVIE_NM_LIST = [
+    "하츄핑",
+    # "블루 록",
+    "아이엠스타",
+    "빈센트",
     "명탐정",
-    "빌보드",
-    "스토커",
-    "쿠렌치스",
-    "핑크퐁",
-    #"여름날",
-    #"엘리멘탈",
-    #"오펜하이머",
-    "노매드",
-    "신체"
+    # "봇치",
+    "정국"
+    # "트랜스포머"
 ]
 
 # 검색할 날짜
-play_ymds = [
-    #"20230824",
-    "20231106"
+PLAY_YMDS = [
+    "20240928",
+    "20241001",
+    "20241003"
 ]
 
 # 상영 시작시간/종료시간
-start_tm = "0800"
-end_tm = "2350"
+START_TM = "0800"
+END_TM = "2350"
 
 # 중간 쉬는 시간
-intermission_tm = "0000"
+INTERMISSION_TM = "0000"
+INTERMISSION_LIMIT = 45
 
 # 결과물 출력수
-list_count = 20
+LIST_COUNT = 20
 
-screen_data = [
+SCREEN_DATA = [
     {
         "type": "CGV",
         "code": "0013",
         "name": "용산"
+    },
+    {
+        "type": "CGV",
+        "code": "0074",
+        "name": "왕십리"
     },
     {
         "type": "CGV",
@@ -91,21 +86,21 @@ screen_data = [
     #     "code": "0009",
     #     "name": "명동"
     # },
+    {
+        "type": "CGV",
+        "code": "0112",
+        "name": "여의도"
+    },
     # {
-    #     "type": "CGV",
-    #     "code": "0112",
-    #     "name": "여의도"
+    #     "type": "Megabox",
+    #     "code": "1581",
+    #     "name": "목동"
     # },
-    {
-        "type": "Megabox",
-        "code": "1581",
-        "name": "목동"
-    },
-    {
-        "type": "Megabox",
-        "code": "0041",
-        "name": "현대백화점"
-    },
+    # {
+    #     "type": "Megabox",
+    #     "code": "0041",
+    #     "name": "현대백화점"
+    # },
     # {
     #     "type": "Megabox",
     #     "code": "1351",
@@ -285,15 +280,18 @@ def get_combination_by_condition(screen, play_ymd, ex_movie_nm_list, in_movie_nm
         # print(f"기준: [{tables[0]['movie_nm']}], 경우의 수: {len(result)}")
 
     print("----------------------------------------------------------------------------------------------")
-    print(f"*필터 조건\n 상영관: [{screen_type}]{screen_name}\n 날짜: {play_ymd}\n 시작시간: {start_tm}\n 종료시간: {end_tm}\n 쉬는시간: {intermission_tm}\n 제외영화: {ex_movie_nm_list}\n 필수영화: {in_movie_nm_list}\n 출력항목수: {list_count}\n")
+    print(f"*필터 조건\n 상영관: [{screen_type}]{screen_name}\n 날짜: {play_ymd}\n 시작시간: {start_tm}\n 종료시간: {end_tm}\n 쉬는시간: {intermission_tm}\n 긴 쉬는시간 기준: {INTERMISSION_LIMIT}분\n 제외영화: {ex_movie_nm_list}\n 필수영화: {in_movie_nm_list}\n 출력항목수: {list_count}\n")
     print(f"모든 경우의 수 : {total}\n")
 
     sorted_totla_result = sorted(totla_result, key=len, reverse=True)
+    normal_results = []
+    long_intermission_results = []
 
     for r in sorted_totla_result[:list_count]:
         text_list = []
-        assigned_text = f"[ {len(r)} ]"
+        assigned_text = f"[ {len(r)} ] "
         pre_end_tm = ""
+        is_long_intermission = False
 
         for assigned in r:
             play_start_tm = assigned['play_start_tm']
@@ -302,12 +300,33 @@ def get_combination_by_condition(screen, play_ymd, ex_movie_nm_list, in_movie_nm
             if pre_end_tm:
                 end_min = int(pre_end_tm[:-2]) * 60 + int(pre_end_tm[-2:])
                 start_tm = int(play_start_tm[:-2]) * 60 + int(play_start_tm[-2:])
-                intermission_tm = f"({start_tm - end_min}) - "
+                intermission_min = start_tm - end_min
+                if intermission_min > INTERMISSION_LIMIT:
+                    is_long_intermission = True
+                intermission_tm = f"({intermission_min}) - "
             text_list.append(f"{intermission_tm}{assigned['movie_nm']}({play_start_tm[:-2]}:{play_start_tm[-2:]}-{play_end_tm[:-2]}:{play_end_tm[-2:]})")
             pre_end_tm = play_end_tm
         
         assigned_text += " - ".join(text_list)
-        print(assigned_text)
+
+        if is_long_intermission:
+            long_intermission_results.append(assigned_text)
+        else:
+            normal_results.append(assigned_text)
+    
+    if normal_results:
+        print("------------------------------------------------------------------------------------------------")
+
+    for normal_result in normal_results:
+        print(normal_result)
+    
+    if long_intermission_results:
+        print(f'\n--------------------------------- 긴 쉬는시간 스케줄 ---------------------------------------------')
+
+    for long_intermission_result in long_intermission_results:
+        print(long_intermission_result)
+    
+    print()
 
 def is_past_date(play_ymd):
     today = datetime.now().strftime('%Y%m%d')
@@ -325,8 +344,8 @@ def store_file(results, filename):
         json.dump(results, json_file, indent=4, ensure_ascii=False)
 
 
-for play_ymd in play_ymds:
-    for screen in screen_data:
-        get_combination_by_condition(screen, play_ymd, ex_movie_nm_list, in_movie_nm_list, start_tm, end_tm, intermission_tm, list_count)
+for play_ymd in PLAY_YMDS:
+    for screen in SCREEN_DATA:
+        get_combination_by_condition(screen, play_ymd, EX_MOVIE_NM_LIST, IN_MOVIE_NM_LIST, START_TM, END_TM, INTERMISSION_TM, LIST_COUNT)
 
-os.system("pause")
+# os.system("pause")
